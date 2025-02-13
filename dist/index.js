@@ -13,24 +13,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = require("commander");
-const node_cluster_1 = __importDefault(require("node:cluster"));
 const node_os_1 = __importDefault(require("node:os"));
 const config_1 = require("./config");
-function createServer(config) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { workerCount } = config;
-        if (node_cluster_1.default.isPrimary) {
-            console.log('Master Process is Up!');
-            for (let i = 0; i < workerCount; i++) {
-                node_cluster_1.default.fork();
-                console.log(`Master Process: Worker Node Spinned Up ${i}`);
-            }
-        }
-        else {
-            console.log('Worker Node: Up');
-        }
-    });
-}
+const server_1 = require("./server");
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
@@ -39,7 +24,7 @@ function main() {
         const options = commander_1.program.opts();
         if (options && 'config' in options) {
             const validatedConfig = yield (0, config_1.validateConfig)(yield (0, config_1.parseYAMLConfig)(options.config));
-            yield createServer({ port: validatedConfig.server.listen, workerCount: (_a = validatedConfig.server.workers) !== null && _a !== void 0 ? _a : node_os_1.default.cpus().length });
+            yield (0, server_1.createServer)({ port: validatedConfig.server.listen, workerCount: (_a = validatedConfig.server.workers) !== null && _a !== void 0 ? _a : node_os_1.default.cpus().length, config: validatedConfig });
         }
     });
 }
