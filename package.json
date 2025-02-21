@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node dist/index --config config.yaml",
     "build": "tsc -p .",
-    "dev": "tsc-watch --onSuccess \"npm start\"",
+    "dev": "LOAD_BALANCE_STRATEGY=least_connections tsc-watch --onSuccess \"npm start\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
