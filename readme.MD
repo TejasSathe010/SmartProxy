@@ -177,6 +177,11 @@ Example:
 LOAD_BALANCE_STRATEGY=least_connections npx nginx-scratch --config config.yaml
 ```
 
+## Demo Images:
+![Demo Image](https://github.com/TejasSathe010/Web-Server-Software-Ngnix/blob/main/img/demo1.png)
+![Demo Image](https://github.com/TejasSathe010/Web-Server-Software-Ngnix/blob/main/img/demo2.png)
+![Demo Image](https://github.com/TejasSathe010/Web-Server-Software-Ngnix/blob/main/img/demo3.png)
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
