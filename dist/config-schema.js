@@ -19,7 +19,8 @@ const serverSchema = zod_1.z.object({
     workers: zod_1.z.number().optional(),
     upstreams: zod_1.z.array(upstreamSchema),
     headers: zod_1.z.array(headerSchema).optional(),
-    rules: zod_1.z.array(ruleSchema)
+    rules: zod_1.z.array(ruleSchema),
+    isHealthCheckEnabled: zod_1.z.boolean().optional()
 });
 exports.rootConfigSchema = zod_1.z.object({
     server: serverSchema

@@ -19,10 +19,17 @@ const config_schema_1 = require("./config-schema");
 const server_schema_1 = require("./server-schema");
 const activeConnections = {};
 const workerRequestCount = {};
+let isHealthCheckEnabled = false;
+const upstreamHealthStatus = {};
+const healthCheckRetryLimit = 3;
+const healthCheckInterval = 30000;
+const healthCheckTimeout = 5000;
 function createServer(serverConfig) {
     return __awaiter(this, void 0, void 0, function* () {
+        var _a;
         const { workerCount, port } = serverConfig;
         const WORKER_POOL = [];
+        isHealthCheckEnabled = (_a = serverConfig.config.server.isHealthCheckEnabled) !== null && _a !== void 0 ? _a : false;
         if (node_cluster_1.default.isPrimary) {
             console.log('Master Process is Up!');
             for (let i = 0; i < workerCount; i++) {
@@ -41,7 +48,7 @@ function createServer(serverConfig) {
                     requestType: 'HTTP',
                     headers: req.headers,
                     body: null,
-                    url: `${req.url}`
+                    url: `${req.url}`,
                 };
                 worker.send(JSON.stringify(payload));
                 worker.once('message', (workerReply) => __awaiter(this, void 0, void 0, function* () {
@@ -59,7 +66,12 @@ function createServer(serverConfig) {
                 }));
                 showLoadBalancerStatus(WORKER_POOL.length);
             });
-            server.listen(port, () => { console.log('Reverse Proxy Running on', port); });
+            server.listen(port, () => {
+                console.log('Reverse Proxy Running on', port);
+            });
+            if (isHealthCheckEnabled) {
+                setInterval(checkUpstreamHealth, healthCheckInterval, serverConfig.config.server.upstreams);
+            }
         }
         else {
             console.log('Worker Node: Up');
@@ -103,21 +115,24 @@ function createServer(serverConfig) {
     });
 }
 function selectUpstream(upstreamIDs, upstreams) {
-    var _a, _b, _c;
+    var _a, _b;
     const availableUpstreams = upstreamIDs
         .map(id => upstreams.find(up => up.id === id))
         .filter((up) => up !== undefined);
-    if (availableUpstreams.length === 0)
-        return (_a = upstreamIDs[0]) !== null && _a !== void 0 ? _a : '';
+    const healthyUpstreams = availableUpstreams.filter(up => upstreamHealthStatus[up.id] !== false);
+    if (healthyUpstreams.length === 0) {
+        console.log('No healthy upstreams available!');
+        return '';
+    }
     const strategy = process.env.LOAD_BALANCE_STRATEGY || 'round_robin';
     if (strategy === 'round_robin') {
-        return roundRobin(availableUpstreams.map(up => up.id));
+        return roundRobin(healthyUpstreams.map(up => up.id));
     }
     else if (strategy === 'least_connections') {
-        return leastConnections(availableUpstreams.map(up => up.id));
+        return leastConnections(healthyUpstreams.map(up => up.id));
     }
     else {
-        return (_c = (_b = availableUpstreams[0]) === null || _b === void 0 ? void 0 : _b.id) !== null && _c !== void 0 ? _c : '';
+        return (_b = (_a = healthyUpstreams[0]) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : '';
     }
 }
 let rrIndex = 0;
@@ -139,11 +154,62 @@ function showLoadBalancerStatus(workerCount) {
     console.log("🔥 Real-Time Load Balancer Status 🔥");
     const tableData = [];
     for (let i = 0; i < workerCount; i++) {
-        tableData.push({
-            "Worker ID": i,
-            "Requests Handled": workerRequestCount[i],
-            "Active Connections": Object.values(activeConnections).reduce((sum, count) => sum + count, 0)
-        });
+        tableData.push(Object.assign({ "Worker ID": i, "Requests Handled": workerRequestCount[i], "Active Connections": Object.values(activeConnections).reduce((sum, count) => sum + count, 0) }, (isHealthCheckEnabled && {
+            "Upstream Health Status": JSON.stringify(upstreamHealthStatus),
+        })));
     }
     console.table(tableData);
+}
+function checkUpstreamHealth(upstreams) {
+    return __awaiter(this, void 0, void 0, function* () {
+        for (const upstream of upstreams) {
+            let retryCount = 0;
+            const healthCheckURL = `${upstream.url}/health`;
+            const healthCheck = () => __awaiter(this, void 0, void 0, function* () {
+                return new Promise((resolve, reject) => {
+                    const req = node_http_1.default.request(healthCheckURL, { method: 'GET', timeout: healthCheckTimeout }, (res) => {
+                        if (res.statusCode === 200) {
+                            upstreamHealthStatus[upstream.id] = true;
+                            console.log(`${upstream.id} is healthy.`);
+                            resolve();
+                        }
+                        else {
+                            upstreamHealthStatus[upstream.id] = false;
+                            console.log(`${upstream.id} is unhealthy. Status Code: ${res.statusCode}`);
+                            reject(`Status Code: ${res.statusCode}`);
+                        }
+                    });
+                    req.on('timeout', () => {
+                        upstreamHealthStatus[upstream.id] = false;
+                        reject('Timeout Error');
+                    });
+                    req.on('error', () => {
+                        upstreamHealthStatus[upstream.id] = false;
+                        reject('Connection Error');
+                    });
+                    req.end();
+                });
+            });
+            try {
+                yield healthCheck(); // First attempt
+            }
+            catch (error) {
+                // Retry on failure up to the retry limit
+                while (retryCount < healthCheckRetryLimit) {
+                    retryCount++;
+                    console.log(`Retrying health check for ${upstream.id} (Attempt ${retryCount})`);
+                    try {
+                        yield healthCheck();
+                        break; // Exit retry loop if health check succeeds
+                    }
+                    catch (_a) {
+                        if (retryCount === healthCheckRetryLimit) {
+                            console.log(`${upstream.id} failed health checks after ${retryCount} attempts.`);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }

@@ -1,7 +1,16 @@
 {
   "name": "nginx-scratch",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "bin": {
+    "nginx-scratch": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
   "scripts": {
     "start": "node dist/index --config config.yaml",
     "build": "tsc -p .",

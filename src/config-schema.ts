@@ -20,7 +20,8 @@ const serverSchema = z.object({
     workers: z.number().optional(),
     upstreams: z.array(upstreamSchema),
     headers: z.array(headerSchema).optional(),
-    rules: z.array(ruleSchema)
+    rules: z.array(ruleSchema),
+    isHealthCheckEnabled: z.boolean().optional()
 });
 
 export const rootConfigSchema = z.object({
