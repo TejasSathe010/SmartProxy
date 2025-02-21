@@ -46,9 +46,9 @@ To use the `nginx-scratch` reverse proxy locally, follow these steps:
          upstreams:
            - upstream1
            - upstream2
-
+  ```
   OR
-
+  ```yaml
   server:
   listen: 8080
   workers: 4
