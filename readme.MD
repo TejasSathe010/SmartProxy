@@ -1,4 +1,4 @@
-# nginx-scratch
+# SmartProxy
 
 `nginx-scratch` is a lightweight reverse proxy server built in Node.js, inspired by Nginx, designed for use in any Node.js project. It provides load balancing strategies, support for worker processes, upstream health checks, and more. This library allows you to configure and manage your reverse proxy with ease, simulating the behavior of Nginx in a customizable, simple-to-use manner.
 
