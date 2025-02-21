@@ -46,6 +46,26 @@ To use the `nginx-scratch` reverse proxy locally, follow these steps:
          upstreams:
            - upstream1
            - upstream2
+
+  OR
+
+  server:
+  listen: 8080
+  workers: 4
+  upstreams:
+    - id: jsonplaceholder
+      url: jsonplaceholder.typicode.com
+    
+  headers:
+    - key: x-forword-for
+      value: '$ip'
+    - key: Authorization
+      value: 'Bearer xyz'
+
+  rules:
+    - path: /
+      upstreams: 
+        - jsonplaceholder    
    ```
 
 2. **Run the Proxy Using `npx`**
