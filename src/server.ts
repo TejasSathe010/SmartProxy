@@ -211,15 +211,14 @@ async function checkUpstreamHealth(upstreams: { id: string, url: string }[]) {
         };
 
         try {
-            await healthCheck(); // First attempt
+            await healthCheck();
         } catch (error) {
-            // Retry on failure up to the retry limit
             while (retryCount < healthCheckRetryLimit) {
                 retryCount++;
                 console.log(`Retrying health check for ${upstream.id} (Attempt ${retryCount})`);
                 try {
                     await healthCheck();
-                    break; // Exit retry loop if health check succeeds
+                    break;
                 } catch {
                     if (retryCount === healthCheckRetryLimit) {
                         console.log(`${upstream.id} failed health checks after ${retryCount} attempts.`);
